@@ -1,72 +1,38 @@
-import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { BlogCard } from '@/components/blog';
 import { BlogListSkeleton } from '@/components/common';
 import { SEO } from '@/components/seo';
 import { usePosts } from '@/hooks/usePosts';
+import { usePostFilter } from '@/hooks/usePostFilter';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Search, Filter, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
-const POSTS_PER_PAGE = 6;
-
 export function BlogPage() {
   const { posts, loading, error } = usePosts();
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
 
-  // Extract unique categories
-  const categories = useMemo(() => {
-    const categorySet = new Set<string>();
-    posts.forEach((post) => {
-      post.postCategories.forEach(({ category }) => {
-        if (category?.name) {
-          categorySet.add(category.name);
-        }
-      });
-    });
-    return Array.from(categorySet).sort();
-  }, [posts]);
+  const {
+    paginatedPosts,
+    filteredPosts,
+    currentPage,
+    totalPages,
+    setPage,
+    nextPage,
+    prevPage,
+    searchQuery,
+    deferredSearchQuery,
+    setSearchQuery,
+    selectedCategory,
+    setSelectedCategory,
+    categories,
+    clearFilters,
+    hasActiveFilters,
+    totalPosts,
+  } = usePostFilter({ posts, postsPerPage: 6 });
 
-  // Filter posts by category and search
-  const filteredPosts = useMemo(() => {
-    return posts.filter((post) => {
-      const matchesCategory = !selectedCategory ||
-        post.postCategories.some(({ category }) => category?.name === selectedCategory);
-
-      const matchesSearch = !searchQuery ||
-        post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.excerpt?.toLowerCase().includes(searchQuery.toLowerCase());
-
-      return matchesCategory && matchesSearch;
-    });
-  }, [posts, selectedCategory, searchQuery]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
-  const paginatedPosts = filteredPosts.slice(
-    (currentPage - 1) * POSTS_PER_PAGE,
-    currentPage * POSTS_PER_PAGE
-  );
-
-  // Reset to page 1 when filters change
-  const handleCategoryChange = (category: string | null) => {
-    setSelectedCategory(category);
-    setCurrentPage(1);
-  };
-
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1);
-  };
-
-  const clearFilters = () => {
-    setSelectedCategory(null);
-    setSearchQuery('');
-    setCurrentPage(1);
-  };
+  // Show subtle loading state when search is pending
+  const isSearchPending = searchQuery !== deferredSearchQuery;
 
   if (error) {
     return (
@@ -92,7 +58,7 @@ export function BlogPage() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-12"
           >
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">
+		    <h1 className="text-4xl md:text-5xl font-bold leading-[1.2] pb-1 mb-4 bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">
               Blog
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -113,12 +79,12 @@ export function BlogPage() {
               <Input
                 placeholder="Search posts..."
                 value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-10 pr-10"
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`pl-10 pr-10 ${isSearchPending ? 'opacity-70' : ''}`}
               />
               {searchQuery && (
                 <button
-                  onClick={() => handleSearchChange('')}
+                  onClick={() => setSearchQuery('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   <X className="h-4 w-4" />
@@ -133,7 +99,7 @@ export function BlogPage() {
                 <Badge
                   variant={selectedCategory === null ? 'default' : 'outline'}
                   className="cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground"
-                  onClick={() => handleCategoryChange(null)}
+                  onClick={() => setSelectedCategory(null)}
                 >
                   All
                 </Badge>
@@ -142,7 +108,7 @@ export function BlogPage() {
                     key={category}
                     variant={selectedCategory === category ? 'default' : 'outline'}
                     className="cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground"
-                    onClick={() => handleCategoryChange(category)}
+                    onClick={() => setSelectedCategory(category)}
                   >
                     {category}
                   </Badge>
@@ -151,10 +117,10 @@ export function BlogPage() {
             )}
 
             {/* Active filters indicator */}
-            {(selectedCategory || searchQuery) && (
+            {hasActiveFilters && (
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                 <span>
-                  Showing {filteredPosts.length} of {posts.length} posts
+                  Showing {filteredPosts.length} of {totalPosts} posts
                 </span>
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
                   Clear filters
@@ -198,7 +164,7 @@ export function BlogPage() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    onClick={prevPage}
                     disabled={currentPage === 1}
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -210,7 +176,7 @@ export function BlogPage() {
                         key={page}
                         variant={currentPage === page ? 'default' : 'ghost'}
                         size="icon"
-                        onClick={() => setCurrentPage(page)}
+                        onClick={() => setPage(page)}
                         className="w-10 h-10"
                       >
                         {page}
@@ -221,7 +187,7 @@ export function BlogPage() {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    onClick={nextPage}
                     disabled={currentPage === totalPages}
                   >
                     <ChevronRight className="h-4 w-4" />

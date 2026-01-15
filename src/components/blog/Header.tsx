@@ -21,20 +21,20 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background backdrop-blur">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+      <div className="container mx-auto flex h-16 items-center justify-between gap-3 px-4">
         {/* Mobile Nav */}
         <MobileNav />
 
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
           <img src="/logo.svg" alt="Wavelength Logo" className="h-9 w-9 object-contain" />
-          <span className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+          <span className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
             Wavelength
           </span>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden md:flex items-center gap-4 lg:gap-6">
           {navItems
             .filter((item) => !item.requiresAdmin || enableAdmin)
             .map(({ href, label }) => (
@@ -54,10 +54,10 @@ export function Header() {
         </nav>
 
         {/* Right side actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <SearchDialog posts={posts} />
           <ThemeToggle />
-          <Button size="sm" className="hidden sm:flex">
+          <Button size="sm" className="hidden lg:flex">
             Subscribe
           </Button>
         </div>
