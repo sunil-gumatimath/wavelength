@@ -1,281 +1,188 @@
-# Wavelength - Modern Personal Blog Platform
+# Wavelength
 
-A feature-rich personal blog platform built with React 19, Vite 7, ShadCN UI, Tailwind CSS 4, and Neon PostgreSQL. Share your thoughts and connect with readers on the same wavelength.
+A modern personal blog platform built with React 19, Vite 7, ShadCN UI, Tailwind CSS 4, and Neon PostgreSQL.
 
 ## Tech Stack
 
-- **React 19** - UI Library with latest features
-- **Vite 7** - Next-generation build tool
-- **TypeScript** - Type-safe development
-- **ShadCN UI** - Beautiful, accessible component library
-- **Tailwind CSS 4** - Utility-first styling
-- **Neon** - Serverless PostgreSQL database
-- **Drizzle ORM** - Type-safe database queries
-- **Bun** - Fast JavaScript runtime and package manager
-- **React Router** - Client-side routing
-- **Framer Motion** - Smooth animations
-- **React Markdown** - Markdown content rendering
-- **React Helmet Async** - SEO meta tag management
+| Category | Technology |
+|----------|------------|
+| Frontend | React 19, TypeScript, Vite 7 |
+| Styling | Tailwind CSS 4, ShadCN UI |
+| Database | Neon PostgreSQL, Drizzle ORM |
+| Runtime | Bun |
+| Routing | React Router |
+| Animations | Framer Motion |
+| Content | React Markdown, React Helmet Async |
 
 ## Features
 
-### Core Features
-- **Blog Posts CRUD** - Create, read, update, and delete blog posts
-- **Admin Dashboard** - Central management interface for all posts
-- **Responsive Design** - Optimized for all device sizes
+- **Blog Management** - Full CRUD operations with admin dashboard
+- **Markdown Support** - GFM markdown with syntax highlighting
 - **Dark/Light Mode** - Theme toggle with system preference detection
-- **Toast Notifications** - User feedback with Sonner
-
-### Content Features
-- **Markdown Support** - Full GFM markdown with syntax highlighting
-- **Reading Time** - Estimated reading time for each post
+- **Global Search** - Keyboard shortcut (Cmd+K / Ctrl+K)
+- **Category Filtering** - Filter and search posts by category
+- **Pagination** - Paginated blog listing with configurable page size
 - **Reading Progress** - Scroll-based progress bar on posts
-- **Related Posts** - Category-based post recommendations
+- **Related Posts** - Category-based recommendations
 - **Comments System** - User comments with form validation
-- **RSS/JSON Feeds** - Automated feed generation during build
-
-### Search and Navigation
-- **Global Search** - Search dialog with keyboard shortcut (Cmd+K / Ctrl+K)
-- **Category Filtering** - Filter posts by category
-- **Pagination** - Paginated blog listing
-- **Mobile Navigation** - Responsive hamburger menu
-
-### SEO and Performance
+- **RSS/JSON Feeds** - Automated feed generation
 - **SEO Optimization** - Dynamic meta tags, Open Graph, Twitter Cards
-- **Loading Skeletons** - Improved perceived performance
-- **Smooth Animations** - Framer Motion integration
+- **Responsive Design** - Mobile-first with hamburger navigation
 
 ## Getting Started
 
 ### Prerequisites
 
-- [Bun](https://bun.sh/) installed (v1.0 or later)
-- [Neon](https://neon.tech/) account for PostgreSQL database
+- [Bun](https://bun.sh/) v1.0+
+- [Neon](https://neon.tech/) PostgreSQL account
 
 ### Installation
 
-1. Clone the repository and install dependencies:
-
 ```bash
+# Clone and install
 git clone https://github.com/sunil-gumatimath/wave-length.git
 cd wave-length
 bun install
-```
 
-2. Set up environment variables:
-
-```bash
+# Configure environment
 cp .env.example .env
-```
+# Update .env with your Neon connection string
 
-3. Update `.env` with your Neon database connection string:
-
-```env
-VITE_DATABASE_URL=postgresql://username:password@ep-xxx.region.aws.neon.tech/neondb?sslmode=require
-```
-
-4. Push the database schema to Neon:
-
-```bash
+# Setup database
 bun run db:push
-```
 
-5. Start the development server:
-
-```bash
+# Start development
 bun run dev
 ```
 
-The application will be available at `http://localhost:5173`.
+The app will be available at `http://localhost:5173`.
 
-## Available Scripts
+## Scripts
 
 | Command | Description |
 |---------|-------------|
 | `bun run dev` | Start development server |
-| `bun run build` | Generate feeds and build for production |
+| `bun run build` | Build for production |
 | `bun run preview` | Preview production build |
 | `bun run lint` | Run ESLint |
-| `bun run db:generate` | Generate database migrations |
-| `bun run db:migrate` | Run database migrations |
 | `bun run db:push` | Push schema to database |
 | `bun run db:studio` | Open Drizzle Studio |
-| `bun run db:proxy` | Start database proxy for local development |
+| `bun run db:proxy` | Start database proxy |
 
 ## Project Structure
 
 ```
 src/
 ├── components/
-│   ├── blog/                    # Blog-specific components
-│   │   ├── BlogCard.tsx         # Blog post card with animations
-│   │   ├── CommentForm.tsx      # Comment submission form
-│   │   ├── Footer.tsx           # Site footer with links
-│   │   ├── Header.tsx           # Header with nav, search, theme toggle
-│   │   ├── Layout.tsx           # Main layout wrapper
-│   │   ├── MarkdownRenderer.tsx # Markdown to HTML renderer
-│   │   ├── PostForm.tsx         # Create/edit post form with preview
-│   │   ├── RelatedPosts.tsx     # Related posts section
-│   │   └── index.ts             # Barrel exports
-│   │
-│   ├── common/                  # Shared/reusable components
-│   │   ├── ReadingProgress.tsx  # Scroll progress indicator
-│   │   ├── SearchDialog.tsx     # Global search modal
-│   │   ├── Skeletons.tsx        # Loading skeleton components
-│   │   └── index.ts
-│   │
-│   ├── layout/                  # Layout components
-│   │   ├── MobileNav.tsx        # Mobile hamburger menu
-│   │   └── index.ts
-│   │
-│   ├── seo/                     # SEO components
-│   │   ├── SEO.tsx              # Meta tag management
-│   │   └── index.ts
-│   │
-│   ├── theme/                   # Theme components
-│   │   ├── ThemeProvider.tsx    # Theme context provider
-│   │   ├── ThemeToggle.tsx      # Dark/light mode toggle
-│   │   └── index.ts
-│   │
-│   └── ui/                      # ShadCN UI primitives
-│       └── [component].tsx
-│
-├── db/
-│   ├── index.ts                 # Database connection
-│   └── schema.ts                # Drizzle schema definitions
-│
-├── hooks/
-│   └── usePosts.ts              # React hooks for post operations
-│
-├── lib/
-│   ├── reading-time.ts          # Reading time utilities
-│   └── utils.ts                 # General utility functions
-│
-├── pages/
-│   ├── admin/
-│   │   ├── AdminDashboard.tsx   # Posts management dashboard
-│   │   ├── CreatePostPage.tsx   # Create new post
-│   │   └── EditPostPage.tsx     # Edit existing post
-│   ├── AboutPage.tsx            # About page
-│   ├── BlogPage.tsx             # Blog listing with search/filter
-│   ├── BlogPostPage.tsx         # Single post view
-│   └── HomePage.tsx             # Home page
-│
-├── services/
-│   └── postService.ts           # CRUD operations for posts
-│
-├── types/
-│   └── blog.ts                  # TypeScript type definitions
-│
-├── App.tsx                      # Main app with routing
-├── index.css                    # Global styles and theme
-└── main.tsx                     # Application entry point
+│   ├── blog/           # BlogCard, Header, Footer, PostForm, etc.
+│   ├── common/         # ReadingProgress, SearchDialog, Skeletons
+│   ├── layout/         # MobileNav
+│   ├── seo/            # SEO meta management
+│   ├── theme/          # ThemeProvider, ThemeToggle
+│   └── ui/             # ShadCN UI primitives
+├── db/                 # Database connection and schema
+├── hooks/              # usePosts, usePostFilter
+├── lib/                # Utilities (reading-time, utils)
+├── pages/              # HomePage, BlogPage, BlogPostPage, AboutPage, Admin
+├── services/           # postService (CRUD operations)
+└── types/              # TypeScript definitions
 ```
 
 ## API Reference
 
-### Service Layer (src/services/postService.ts)
+### Post Service
 
 ```typescript
-// Create a new post
+// CRUD Operations
 await createPost({ title, slug, content, authorId, excerpt, coverImage });
-
-// Read all posts with relations
 await getAllPosts();
-
-// Read single post by ID or slug
 await getPostById(id);
 await getPostBySlug(slug);
-
-// Update a post
 await updatePost(id, { title, content, ... });
-
-// Delete a post
 await deletePost(id);
-
-// Generate URL-friendly slug
 generateSlug(title);
 ```
 
-### React Hooks (src/hooks/usePosts.ts)
+### Hooks
 
 ```typescript
-// Fetch all posts
+// Fetch posts
 const { posts, loading, error, refetch } = usePosts();
+const { post, loading, error } = usePostBySlug(slug);
 
-// Fetch single post by ID
-const { post, loading, error } = usePost(id);
-
-// Fetch single post by slug
-const { post, loading, error, refetch } = usePostBySlug(slug);
+// Filter and paginate posts
+const {
+  filteredPosts,
+  paginatedPosts,
+  currentPage,
+  totalPages,
+  setPage,
+  searchQuery,
+  setSearchQuery,
+  selectedCategory,
+  setSelectedCategory,
+  categories,
+  clearFilters,
+} = usePostFilter({ posts, postsPerPage: 6 });
 
 // Mutations
-const { createPost, updatePost, deletePost, loading, error } = usePostMutations();
+const { createPost, updatePost, deletePost } = usePostMutations();
 ```
 
 ## Routes
 
 | Route | Description |
 |-------|-------------|
-| `/` | Home page with hero section and featured posts |
-| `/blog` | Blog listing with search, filter, and pagination |
-| `/blog/:slug` | Single post view with comments |
-| `/about` | About page with tech stack info |
-| `/admin` | Admin dashboard for post management |
-| `/admin/posts/new` | Create new post |
-| `/admin/posts/:id/edit` | Edit existing post |
+| `/` | Home page |
+| `/blog` | Blog listing with search and filter |
+| `/blog/:slug` | Single post view |
+| `/about` | About page |
+| `/admin` | Admin dashboard |
+| `/admin/posts/new` | Create post |
+| `/admin/posts/:id/edit` | Edit post |
 
 ## Database Schema
 
-The blog uses the following tables:
-
-- **users** - User accounts with name, email, avatar
-- **posts** - Blog posts with title, slug, content, excerpt, cover image, timestamps
-- **comments** - Post comments linked to users
-- **categories** - Post categories
-- **post_categories** - Many-to-many relationship between posts and categories
-
-### Schema Relations
-
 ```
-users (1) ──────────── (n) posts
-users (1) ──────────── (n) comments
-posts (1) ──────────── (n) comments
-posts (n) ──────────── (n) categories (via post_categories)
+users (1) ─── (n) posts
+users (1) ─── (n) comments
+posts (1) ─── (n) comments
+posts (n) ─── (n) categories (via post_categories)
 ```
-
-## Adding ShadCN Components
-
-Add new UI components using:
-
-```bash
-bunx --bun shadcn@latest add [component-name]
-```
-
-Available components: button, card, dialog, dropdown-menu, input, label, sheet, table, etc.
 
 ## Customization
 
 ### Theme Colors
 
-Edit `src/index.css` to customize the color scheme. The theme uses CSS custom properties with OKLCH color format:
+Edit `src/index.css` to customize colors using OKLCH format:
 
 ```css
 :root {
   --primary: oklch(0.45 0.2 265);
   --background: oklch(0.985 0.002 247.858);
-  /* ... other variables */
 }
 
 .dark {
   --primary: oklch(0.65 0.22 265);
   --background: oklch(0.12 0.01 265);
-  /* ... dark mode variables */
 }
 ```
 
-### Adding New Features
+### Adding ShadCN Components
 
-1. Create component in appropriate folder under `src/components/`
-2. Export from the folder's `index.ts`
-3. Import using barrel exports: `import { Component } from '@/components/folder'`
+```bash
+bunx --bun shadcn@latest add [component-name]
+```
+
+## Recent Changes (v1.1.0)
+
+- Rebranded from TedBlog to Wavelength
+- Added `usePostFilter` hook with search, filtering, and pagination
+- Redesigned Footer with grid layout and social links
+- Enhanced Header styling and mobile navigation
+- Optimized `postService` with raw SQL for reliable date handling
+- General code cleanup and performance improvements
+
+---
+
+This project is open source and free to use. Feel free to use, modify, and distribute it for personal or commercial projects.
