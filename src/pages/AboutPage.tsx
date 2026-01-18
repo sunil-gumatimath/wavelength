@@ -7,10 +7,10 @@ import { Separator } from '@/components/ui/separator';
 import { SEO } from '@/components/seo';
 
 const techStack = [
-  { name: 'React 19', description: 'UI Library', color: 'bg-blue-500' },
-  { name: 'Vite 7', description: 'Build Tool', color: 'bg-purple-500' },
+  { name: 'React', description: 'UI Library', color: 'bg-blue-500' },
+  { name: 'Vite', description: 'Build Tool', color: 'bg-purple-500' },
   { name: 'ShadCN UI', description: 'Component Library', color: 'bg-green-500' },
-  { name: 'Tailwind CSS 4', description: 'Styling', color: 'bg-cyan-500' },
+  { name: 'Tailwind CSS', description: 'Styling', color: 'bg-cyan-500' },
   { name: 'Neon', description: 'Serverless PostgreSQL', color: 'bg-emerald-500' },
   { name: 'Drizzle ORM', description: 'Type-safe Queries', color: 'bg-yellow-500' },
   { name: 'TypeScript', description: 'Type Safety', color: 'bg-blue-600' },
@@ -28,10 +28,11 @@ const features = [
   'Reading progress + related posts',
 ];
 
+// TODO: Update with your actual social profile URLs
 const socialLinks = [
-  { href: 'https://twitter.com', icon: Twitter, label: 'Twitter' },
-  { href: 'https://github.com', icon: Github, label: 'GitHub' },
-  { href: 'https://linkedin.com', icon: Linkedin, label: 'LinkedIn' },
+  { href: 'https://twitter.com/yourhandle', icon: Twitter, label: 'Twitter' },
+  { href: 'https://github.com/yourhandle', icon: Github, label: 'GitHub' },
+  { href: 'https://linkedin.com/in/yourhandle', icon: Linkedin, label: 'LinkedIn' },
 ];
 
 export function AboutPage() {

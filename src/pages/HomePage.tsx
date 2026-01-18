@@ -154,7 +154,7 @@ export function HomePage() {
             >
               <div>
                 <h2 className="text-3xl md:text-4xl font-bold">Latest Articles</h2>
-                <p className="text-muted-foreground mt-2">Fresh content from our writers</p>
+                <p className="text-muted-foreground mt-2">Recent posts and updates</p>
               </div>
               <Button variant="ghost" asChild className="hidden sm:flex">
                 <Link to="/blog">
@@ -242,7 +242,7 @@ export function HomePage() {
 
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">Stay Updated</h2>
                 <p className="text-muted-foreground mb-8 text-lg">
-                  Subscribe to our newsletter for the latest articles, tutorials, and updates.
+                  Subscribe for the latest articles, tutorials, and updates.
                   No spam, unsubscribe at any time.
                 </p>
 
@@ -281,55 +281,7 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* Features Section */}
-        <section className="py-20 px-4 bg-muted/30">
-          <div className="container mx-auto">
-            <motion.div
-              initial={motionEnabled ? { opacity: 0, y: 20 } : false}
-              whileInView={motionEnabled ? { opacity: 1, y: 0 } : undefined}
-              viewport={{ once: true }}
-              className="text-center mb-12"
-            >
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Wavelength?</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                A modern blogging platform built with the latest web technologies
-              </p>
-            </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[
-                {
-                  title: 'Modern Stack',
-                  description: 'Built with React 19, Vite 7, Tailwind CSS 4, and PostgreSQL for blazing fast performance.',
-                  icon: '⚡',
-                },
-                {
-                  title: 'Beautiful Design',
-                  description: 'Clean, minimal design with dark mode support and smooth animations using Framer Motion.',
-                  icon: '🎨',
-                },
-                {
-                  title: 'Full Featured',
-                  description: 'Complete CRUD operations, comments, categories, search, and much more out of the box.',
-                  icon: '✨',
-                },
-              ].map((feature, index) => (
-                <motion.div
-                  key={feature.title}
-                  initial={motionEnabled ? { opacity: 0, y: 20 } : false}
-                  whileInView={motionEnabled ? { opacity: 1, y: 0 } : undefined}
-                  viewport={{ once: true }}
-                  transition={motionEnabled ? { delay: index * 0.1 } : undefined}
-                  className="text-center p-6 rounded-xl bg-background shadow-sm border"
-                >
-                  <div className="text-4xl mb-4">{feature.icon}</div>
-                  <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
       </div>
     </>
   );

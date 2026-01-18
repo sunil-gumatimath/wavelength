@@ -117,6 +117,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
@@ -212,6 +213,7 @@ code:not(pre code) {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -222,6 +224,7 @@ code:not(pre code) {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -253,4 +256,35 @@ code:not(pre code) {
 
 .dark .glass {
   background: oklch(0.17 0.015 265 / 80%);
+}
+
+/* Footer animations */
+@keyframes pulse-soft {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Footer link hover line animation */
+footer a:hover .footer-link-line {
+  width: 0.5rem;
+}
+
+/* Social icon glow effect on hover */
+footer a:hover {
+  box-shadow: 0 0 20px oklch(0.45 0.2 265 / 20%);
+}
+
+.dark footer a:hover {
+  box-shadow: 0 0 20px oklch(0.65 0.22 265 / 30%);
 }
