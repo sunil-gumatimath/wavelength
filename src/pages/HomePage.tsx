@@ -122,7 +122,8 @@ export function HomePage() {
                 variants={motionEnabled ? itemVariants : undefined}
                 className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed"
               >
-                I share notes on web development, technology, and building things.
+                Exploring web development, modern tech, and the craft of building great software.
+                Thoughts, tutorials, and lessons learned along the way.
               </motion.p>
 
               <motion.div

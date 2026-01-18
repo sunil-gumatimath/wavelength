@@ -148,71 +148,31 @@ export async function createPost(data: NewPost): Promise<Post> {
   return newPost;
 }
 
-// READ - Get all posts with relations (uses raw SQL)
-export async function getAllPosts(): Promise<PostWithRelations[]> {
-  // Fetch all posts with their authors
-  const postsQuery = `
-    SELECT 
-      p.id, p.title, p.slug, p.excerpt, p.content, p.cover_image,
-      p.author_id, p.published_at, p.created_at, p.updated_at,
-      a.id as author_id, a.name as author_name, a.email as author_email,
-      a.avatar as author_avatar, a.bio as author_bio, a.created_at as author_created_at
-    FROM posts p
-    LEFT JOIN users a ON p.author_id = a.id
-    ORDER BY p.published_at DESC NULLS LAST
-  `;
+// Type for raw post with joined author fields
+type RawPostWithAuthor = RawPost & {
+  author_name?: string;
+  author_email?: string;
+  author_avatar?: string | null;
+  author_bio?: string | null;
+  author_created_at?: string;
+};
 
-  const rawPosts = await executeRawQuery<RawPost & {
-    author_name?: string;
-    author_email?: string;
-    author_avatar?: string | null;
-    author_bio?: string | null;
-    author_created_at?: string;
-  }>(postsQuery);
+// Type for raw comment with joined author fields
+type RawCommentWithAuthor = RawComment & {
+  comment_author_id?: number;
+  comment_author_name?: string;
+  comment_author_email?: string;
+  comment_author_avatar?: string | null;
+  comment_author_bio?: string | null;
+  comment_author_created_at?: string;
+};
 
-  // Fetch all post-category relationships
-  const categoriesQuery = `
-    SELECT pc.post_id, c.id, c.name, c.slug, c.created_at
-    FROM post_categories pc
-    JOIN categories c ON pc.category_id = c.id
-  `;
-  const rawCategories = await executeRawQuery<RawCategory & { post_id: number }>(categoriesQuery);
-
-  // Fetch all comments with authors
-  const commentsQuery = `
-    SELECT 
-      cm.id, cm.content, cm.post_id, cm.author_id, cm.created_at,
-      a.id as comment_author_id, a.name as comment_author_name, 
-      a.email as comment_author_email, a.avatar as comment_author_avatar,
-      a.bio as comment_author_bio, a.created_at as comment_author_created_at
-    FROM comments cm
-    LEFT JOIN users a ON cm.author_id = a.id
-    ORDER BY cm.created_at DESC
-  `;
-  const rawComments = await executeRawQuery<RawComment & {
-    comment_author_id?: number;
-    comment_author_name?: string;
-    comment_author_email?: string;
-    comment_author_avatar?: string | null;
-    comment_author_bio?: string | null;
-    comment_author_created_at?: string;
-  }>(commentsQuery);
-
-  // Group categories and comments by post_id
-  const categoriesByPost = new Map<number, RawCategory[]>();
-  for (const cat of rawCategories) {
-    if (!categoriesByPost.has(cat.post_id)) {
-      categoriesByPost.set(cat.post_id, []);
-    }
-    categoriesByPost.get(cat.post_id)!.push(cat);
-  }
-
-  const commentsByPost = new Map<number, Array<RawComment & { author?: RawAuthor }>>();
-  for (const comment of rawComments) {
-    if (!commentsByPost.has(comment.post_id)) {
-      commentsByPost.set(comment.post_id, []);
-    }
-    const commentWithAuthor: RawComment & { author?: RawAuthor } = {
+// Helper to transform raw comments to typed comments with authors
+function transformRawComments(
+  rawComments: RawCommentWithAuthor[]
+): Array<RawComment & { author?: RawAuthor }> {
+  return rawComments.map(comment => {
+    const result: RawComment & { author?: RawAuthor } = {
       id: comment.id,
       content: comment.content,
       post_id: comment.post_id,
@@ -220,210 +180,168 @@ export async function getAllPosts(): Promise<PostWithRelations[]> {
       created_at: comment.created_at,
     };
     if (comment.comment_author_id) {
-      commentWithAuthor.author = {
+      result.author = {
         id: comment.comment_author_id,
-        name: comment.comment_author_name!,
-        email: comment.comment_author_email!,
+        name: comment.comment_author_name ?? 'Unknown',
+        email: comment.comment_author_email ?? '',
         avatar: comment.comment_author_avatar ?? null,
         bio: comment.comment_author_bio ?? null,
-        created_at: comment.comment_author_created_at!,
+        created_at: comment.comment_author_created_at ?? new Date().toISOString(),
       };
     }
-    commentsByPost.get(comment.post_id)!.push(commentWithAuthor);
-  }
-
-  // Transform and return
-  return rawPosts.map(post => {
-    const author: RawAuthor | null = post.author_name ? {
-      id: post.author_id,
-      name: post.author_name,
-      email: post.author_email!,
-      avatar: post.author_avatar ?? null,
-      bio: post.author_bio ?? null,
-      created_at: post.author_created_at!,
-    } : null;
-
-    return transformRawToPost(
-      post,
-      author,
-      categoriesByPost.get(post.id) || [],
-      commentsByPost.get(post.id) || []
-    );
+    return result;
   });
+}
+
+// Helper to extract author from raw post
+function extractAuthorFromPost(post: RawPostWithAuthor): RawAuthor | null {
+  if (!post.author_name) return null;
+  return {
+    id: post.author_id,
+    name: post.author_name,
+    email: post.author_email ?? '',
+    avatar: post.author_avatar ?? null,
+    bio: post.author_bio ?? null,
+    created_at: post.author_created_at ?? new Date().toISOString(),
+  };
+}
+
+// READ - Get all posts with relations (uses raw SQL)
+export async function getAllPosts(): Promise<PostWithRelations[]> {
+  try {
+    // Fetch all posts with their authors
+    const postsQuery = `
+      SELECT 
+        p.id, p.title, p.slug, p.excerpt, p.content, p.cover_image,
+        p.author_id, p.published_at, p.created_at, p.updated_at,
+        a.id as author_id, a.name as author_name, a.email as author_email,
+        a.avatar as author_avatar, a.bio as author_bio, a.created_at as author_created_at
+      FROM posts p
+      LEFT JOIN users a ON p.author_id = a.id
+      ORDER BY p.published_at DESC NULLS LAST
+    `;
+
+    const rawPosts = await executeRawQuery<RawPostWithAuthor>(postsQuery);
+
+    // Fetch all post-category relationships
+    const categoriesQuery = `
+      SELECT pc.post_id, c.id, c.name, c.slug, c.created_at
+      FROM post_categories pc
+      JOIN categories c ON pc.category_id = c.id
+    `;
+    const rawCategories = await executeRawQuery<RawCategory & { post_id: number }>(categoriesQuery);
+
+    // Fetch all comments with authors
+    const commentsQuery = `
+      SELECT 
+        cm.id, cm.content, cm.post_id, cm.author_id, cm.created_at,
+        a.id as comment_author_id, a.name as comment_author_name, 
+        a.email as comment_author_email, a.avatar as comment_author_avatar,
+        a.bio as comment_author_bio, a.created_at as comment_author_created_at
+      FROM comments cm
+      LEFT JOIN users a ON cm.author_id = a.id
+      ORDER BY cm.created_at DESC
+    `;
+    const rawComments = await executeRawQuery<RawCommentWithAuthor>(commentsQuery);
+
+    // Group categories and comments by post_id
+    const categoriesByPost = new Map<number, RawCategory[]>();
+    for (const cat of rawCategories) {
+      if (!categoriesByPost.has(cat.post_id)) {
+        categoriesByPost.set(cat.post_id, []);
+      }
+      categoriesByPost.get(cat.post_id)!.push(cat);
+    }
+
+    const commentsByPost = new Map<number, Array<RawComment & { author?: RawAuthor }>>();
+    for (const comment of rawComments) {
+      if (!commentsByPost.has(comment.post_id)) {
+        commentsByPost.set(comment.post_id, []);
+      }
+      const commentWithAuthor = transformRawComments([comment])[0];
+      commentsByPost.get(comment.post_id)!.push(commentWithAuthor);
+    }
+
+    // Transform and return
+    return rawPosts.map(post => {
+      const author = extractAuthorFromPost(post);
+
+      return transformRawToPost(
+        post,
+        author,
+        categoriesByPost.get(post.id) || [],
+        commentsByPost.get(post.id) || []
+      );
+    });
+  } catch (error) {
+    console.error('Failed to fetch all posts:', error);
+    throw error;
+  }
+}
+
+// Shared helper to fetch a single post with all relations
+async function fetchSinglePostWithRelations(
+  whereClause: string,
+  params: unknown[]
+): Promise<PostWithRelations | undefined> {
+  try {
+    const postQuery = `
+      SELECT 
+        p.id, p.title, p.slug, p.excerpt, p.content, p.cover_image,
+        p.author_id, p.published_at, p.created_at, p.updated_at,
+        a.id as author_id, a.name as author_name, a.email as author_email,
+        a.avatar as author_avatar, a.bio as author_bio, a.created_at as author_created_at
+      FROM posts p
+      LEFT JOIN users a ON p.author_id = a.id
+      WHERE ${whereClause}
+    `;
+
+    const rawPosts = await executeRawQuery<RawPostWithAuthor>(postQuery, params);
+
+    if (rawPosts.length === 0) return undefined;
+    const post = rawPosts[0];
+
+    // Fetch categories for this post
+    const categoriesQuery = `
+      SELECT c.id, c.name, c.slug, c.created_at
+      FROM post_categories pc
+      JOIN categories c ON pc.category_id = c.id
+      WHERE pc.post_id = $1
+    `;
+    const categories = await executeRawQuery<RawCategory>(categoriesQuery, [post.id]);
+
+    // Fetch comments for this post
+    const commentsQuery = `
+      SELECT 
+        cm.id, cm.content, cm.post_id, cm.author_id, cm.created_at,
+        a.id as comment_author_id, a.name as comment_author_name, 
+        a.email as comment_author_email, a.avatar as comment_author_avatar,
+        a.bio as comment_author_bio, a.created_at as comment_author_created_at
+      FROM comments cm
+      LEFT JOIN users a ON cm.author_id = a.id
+      WHERE cm.post_id = $1
+      ORDER BY cm.created_at DESC
+    `;
+    const rawComments = await executeRawQuery<RawCommentWithAuthor>(commentsQuery, [post.id]);
+
+    const comments = transformRawComments(rawComments);
+    const author = extractAuthorFromPost(post);
+
+    return transformRawToPost(post, author, categories, comments);
+  } catch (error) {
+    console.error('Failed to fetch post with relations:', error);
+    throw error;
+  }
 }
 
 // READ - Get a single post by ID (uses raw SQL)
 export async function getPostById(id: number): Promise<PostWithRelations | undefined> {
-  const postQuery = `
-    SELECT 
-      p.id, p.title, p.slug, p.excerpt, p.content, p.cover_image,
-      p.author_id, p.published_at, p.created_at, p.updated_at,
-      a.id as author_id, a.name as author_name, a.email as author_email,
-      a.avatar as author_avatar, a.bio as author_bio, a.created_at as author_created_at
-    FROM posts p
-    LEFT JOIN users a ON p.author_id = a.id
-    WHERE p.id = $1
-  `;
-
-  const rawPosts = await executeRawQuery<RawPost & {
-    author_name?: string;
-    author_email?: string;
-    author_avatar?: string | null;
-    author_bio?: string | null;
-    author_created_at?: string;
-  }>(postQuery, [id]);
-
-  if (rawPosts.length === 0) return undefined;
-  const post = rawPosts[0];
-
-  // Fetch categories for this post
-  const categoriesQuery = `
-    SELECT c.id, c.name, c.slug, c.created_at
-    FROM post_categories pc
-    JOIN categories c ON pc.category_id = c.id
-    WHERE pc.post_id = $1
-  `;
-  const categories = await executeRawQuery<RawCategory>(categoriesQuery, [id]);
-
-  // Fetch comments for this post
-  const commentsQuery = `
-    SELECT 
-      cm.id, cm.content, cm.post_id, cm.author_id, cm.created_at,
-      a.id as comment_author_id, a.name as comment_author_name, 
-      a.email as comment_author_email, a.avatar as comment_author_avatar,
-      a.bio as comment_author_bio, a.created_at as comment_author_created_at
-    FROM comments cm
-    LEFT JOIN users a ON cm.author_id = a.id
-    WHERE cm.post_id = $1
-    ORDER BY cm.created_at DESC
-  `;
-  const rawComments = await executeRawQuery<RawComment & {
-    comment_author_id?: number;
-    comment_author_name?: string;
-    comment_author_email?: string;
-    comment_author_avatar?: string | null;
-    comment_author_bio?: string | null;
-    comment_author_created_at?: string;
-  }>(commentsQuery, [id]);
-
-  const comments: Array<RawComment & { author?: RawAuthor }> = rawComments.map(comment => {
-    const result: RawComment & { author?: RawAuthor } = {
-      id: comment.id,
-      content: comment.content,
-      post_id: comment.post_id,
-      author_id: comment.author_id,
-      created_at: comment.created_at,
-    };
-    if (comment.comment_author_id) {
-      result.author = {
-        id: comment.comment_author_id,
-        name: comment.comment_author_name!,
-        email: comment.comment_author_email!,
-        avatar: comment.comment_author_avatar ?? null,
-        bio: comment.comment_author_bio ?? null,
-        created_at: comment.comment_author_created_at!,
-      };
-    }
-    return result;
-  });
-
-  const author: RawAuthor | null = post.author_name ? {
-    id: post.author_id,
-    name: post.author_name,
-    email: post.author_email!,
-    avatar: post.author_avatar ?? null,
-    bio: post.author_bio ?? null,
-    created_at: post.author_created_at!,
-  } : null;
-
-  return transformRawToPost(post, author, categories, comments);
+  return fetchSinglePostWithRelations('p.id = $1', [id]);
 }
 
 // READ - Get a single post by slug (uses raw SQL)
 export async function getPostBySlug(slug: string): Promise<PostWithRelations | undefined> {
-  const postQuery = `
-    SELECT 
-      p.id, p.title, p.slug, p.excerpt, p.content, p.cover_image,
-      p.author_id, p.published_at, p.created_at, p.updated_at,
-      a.id as author_id, a.name as author_name, a.email as author_email,
-      a.avatar as author_avatar, a.bio as author_bio, a.created_at as author_created_at
-    FROM posts p
-    LEFT JOIN users a ON p.author_id = a.id
-    WHERE p.slug = $1
-  `;
-
-  const rawPosts = await executeRawQuery<RawPost & {
-    author_name?: string;
-    author_email?: string;
-    author_avatar?: string | null;
-    author_bio?: string | null;
-    author_created_at?: string;
-  }>(postQuery, [slug]);
-
-  if (rawPosts.length === 0) return undefined;
-  const post = rawPosts[0];
-
-  // Fetch categories for this post
-  const categoriesQuery = `
-    SELECT c.id, c.name, c.slug, c.created_at
-    FROM post_categories pc
-    JOIN categories c ON pc.category_id = c.id
-    WHERE pc.post_id = $1
-  `;
-  const categories = await executeRawQuery<RawCategory>(categoriesQuery, [post.id]);
-
-  // Fetch comments for this post
-  const commentsQuery = `
-    SELECT 
-      cm.id, cm.content, cm.post_id, cm.author_id, cm.created_at,
-      a.id as comment_author_id, a.name as comment_author_name, 
-      a.email as comment_author_email, a.avatar as comment_author_avatar,
-      a.bio as comment_author_bio, a.created_at as comment_author_created_at
-    FROM comments cm
-    LEFT JOIN users a ON cm.author_id = a.id
-    WHERE cm.post_id = $1
-    ORDER BY cm.created_at DESC
-  `;
-  const rawComments = await executeRawQuery<RawComment & {
-    comment_author_id?: number;
-    comment_author_name?: string;
-    comment_author_email?: string;
-    comment_author_avatar?: string | null;
-    comment_author_bio?: string | null;
-    comment_author_created_at?: string;
-  }>(commentsQuery, [post.id]);
-
-  const comments: Array<RawComment & { author?: RawAuthor }> = rawComments.map(comment => {
-    const result: RawComment & { author?: RawAuthor } = {
-      id: comment.id,
-      content: comment.content,
-      post_id: comment.post_id,
-      author_id: comment.author_id,
-      created_at: comment.created_at,
-    };
-    if (comment.comment_author_id) {
-      result.author = {
-        id: comment.comment_author_id,
-        name: comment.comment_author_name!,
-        email: comment.comment_author_email!,
-        avatar: comment.comment_author_avatar ?? null,
-        bio: comment.comment_author_bio ?? null,
-        created_at: comment.comment_author_created_at!,
-      };
-    }
-    return result;
-  });
-
-  const author: RawAuthor | null = post.author_name ? {
-    id: post.author_id,
-    name: post.author_name,
-    email: post.author_email!,
-    avatar: post.author_avatar ?? null,
-    bio: post.author_bio ?? null,
-    created_at: post.author_created_at!,
-  } : null;
-
-  return transformRawToPost(post, author, categories, comments);
+  return fetchSinglePostWithRelations('p.slug = $1', [slug]);
 }
 
 // UPDATE - Update an existing post (uses Drizzle - works fine for writes)
