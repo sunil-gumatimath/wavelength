@@ -1,7 +1,7 @@
 import { getDb, getProxyUrl } from '@/db';
-import { posts, type Post, type NewPost } from '@/db/schema';
+import { posts, type Post, type NewPost, type User, type Category, type Comment } from '@/db/schema';
 import type { PostWithRelations } from '@/types/blog';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 
 // ============================================================================
 // RAW SQL APPROACH - Bypasses Drizzle's broken timestamp parsing
@@ -28,11 +28,45 @@ async function executeRawQuery<T>(query: string, params: unknown[] = []): Promis
   return data as T[];
 }
 
+function isLocalDbUrl(): boolean {
+  const dbUrl = import.meta.env.VITE_DATABASE_URL;
+  return Boolean(dbUrl && (dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1')));
+}
+
 // Helper to safely parse date strings from raw SQL results
 function parseDate(value: string | null): Date | null {
   if (!value) return null;
   const parsed = new Date(value);
   return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+type DrizzlePostRelations = Post & {
+  author: User | null;
+  postCategories: { category: Category | null }[];
+  comments: (Comment & { author: User | null })[];
+};
+
+function normalizePostFromDb(post: DrizzlePostRelations): PostWithRelations {
+  const fallbackAuthor: User = post.author ?? {
+    id: post.authorId,
+    name: 'Unknown Author',
+    email: '',
+    avatar: null,
+    bio: null,
+    createdAt: new Date(),
+  };
+
+  return {
+    ...post,
+    author: post.author ?? fallbackAuthor,
+    postCategories: post.postCategories
+      .filter((pc) => pc.category)
+      .map((pc) => ({ category: pc.category! })),
+    comments: post.comments.map((comment) => ({
+      ...comment,
+      author: comment.author ?? fallbackAuthor,
+    })),
+  };
 }
 
 // Raw database row types (snake_case)
@@ -150,6 +184,7 @@ export async function createPost(data: NewPost): Promise<Post> {
 
 // Type for raw post with joined author fields
 type RawPostWithAuthor = RawPost & {
+  author_user_id?: number;
   author_name?: string;
   author_email?: string;
   author_avatar?: string | null;
@@ -195,9 +230,9 @@ function transformRawComments(
 
 // Helper to extract author from raw post
 function extractAuthorFromPost(post: RawPostWithAuthor): RawAuthor | null {
-  if (!post.author_name) return null;
+  if (!post.author_name || !post.author_user_id) return null;
   return {
-    id: post.author_id,
+    id: post.author_user_id,
     name: post.author_name,
     email: post.author_email ?? '',
     avatar: post.author_avatar ?? null,
@@ -208,13 +243,34 @@ function extractAuthorFromPost(post: RawPostWithAuthor): RawAuthor | null {
 
 // READ - Get all posts with relations (uses raw SQL)
 export async function getAllPosts(): Promise<PostWithRelations[]> {
+  if (!isLocalDbUrl()) {
+    const db = getDb();
+    const results = await db.query.posts.findMany({
+      with: {
+        author: true,
+        postCategories: {
+          with: {
+            category: true,
+          },
+        },
+        comments: {
+          with: {
+            author: true,
+          },
+        },
+      },
+      orderBy: (post) => [desc(post.publishedAt)],
+    });
+    return results.map(normalizePostFromDb);
+  }
+
   try {
     // Fetch all posts with their authors
     const postsQuery = `
       SELECT 
         p.id, p.title, p.slug, p.excerpt, p.content, p.cover_image,
         p.author_id, p.published_at, p.created_at, p.updated_at,
-        a.id as author_id, a.name as author_name, a.email as author_email,
+        a.id as author_user_id, a.name as author_name, a.email as author_email,
         a.avatar as author_avatar, a.bio as author_bio, a.created_at as author_created_at
       FROM posts p
       LEFT JOIN users a ON p.author_id = a.id
@@ -284,12 +340,55 @@ async function fetchSinglePostWithRelations(
   whereClause: string,
   params: unknown[]
 ): Promise<PostWithRelations | undefined> {
+  if (!isLocalDbUrl()) {
+    const db = getDb();
+    if (whereClause.includes('p.id')) {
+      const id = params[0] as number;
+      const result = await db.query.posts.findFirst({
+        where: eq(posts.id, id),
+        with: {
+          author: true,
+          postCategories: {
+            with: {
+              category: true,
+            },
+          },
+          comments: {
+            with: {
+              author: true,
+            },
+          },
+        },
+      });
+      return result ? normalizePostFromDb(result) : undefined;
+    }
+
+    const slug = params[0] as string;
+    const result = await db.query.posts.findFirst({
+      where: eq(posts.slug, slug),
+      with: {
+        author: true,
+        postCategories: {
+          with: {
+            category: true,
+          },
+        },
+        comments: {
+          with: {
+            author: true,
+          },
+        },
+      },
+    });
+    return result ? normalizePostFromDb(result) : undefined;
+  }
+
   try {
     const postQuery = `
       SELECT 
         p.id, p.title, p.slug, p.excerpt, p.content, p.cover_image,
         p.author_id, p.published_at, p.created_at, p.updated_at,
-        a.id as author_id, a.name as author_name, a.email as author_email,
+        a.id as author_user_id, a.name as author_name, a.email as author_email,
         a.avatar as author_avatar, a.bio as author_bio, a.created_at as author_created_at
       FROM posts p
       LEFT JOIN users a ON p.author_id = a.id
